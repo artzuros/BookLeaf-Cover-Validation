@@ -7,6 +7,8 @@ Automated visual inspection system that detects text overlap with the **"Winner 
 Upload a cover image (PNG or PDF) and receive a verdict — **PASS**, **WARNING**, or **VIOLATION** — along with annotated visuals, correction instructions, and revision tracking.
 
 ---
+### Loom Video : https://www.loom.com/share/778c935633ae4817b25ee5eba66019ed
+---
 
 ## Architecture
 
