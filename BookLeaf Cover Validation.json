@@ -1,0 +1,1050 @@
+{
+  "name": "BookLeaf Cover Validation",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "bd7a23be-139c-483e-b18c-fdb51706e738",
+              "leftValue": "={{ $json.fileExtension }}",
+              "rightValue": "png",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "e553dc51-834a-4350-b61f-a581ab178aee",
+              "leftValue": "={{ $json.fileExtension }}",
+              "rightValue": "pdf",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "63d8cb74-39f1-4262-84d8-9d0b2d812d54",
+              "leftValue": "={{ $json.fileExtension }}",
+              "rightValue": "jpg",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "9ea81d98-b145-4901-bd73-8d6673c331e7",
+              "leftValue": "={{ $json.fileExtension }}",
+              "rightValue": "jpeg",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        640,
+        256
+      ],
+      "id": "dbc3b6f0-f4f8-4d84-82bf-ffcffd340bf0",
+      "name": "File Type Filter"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://192.168.0.75:8010/verify",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "={{ $binary.data }}"
+            },
+            {
+              "name": "isbn",
+              "value": "={{ $json.name.split(\"_\").first() }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1088,
+        256
+      ],
+      "id": "17846e3a-7256-4193-84e4-a906fd4379b1",
+      "name": "Verify Cover API"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "Formatted_Corrections",
+              "value": "={{ $('Verify Cover API').item.json.correction_instructions.step_by_step.join('\\n') }}"
+            },
+            {
+              "name": "Airtable_Status",
+              "value": "={{ $('Verify Cover API').item.json.status === 'Pass' ? 'Pass' : 'Review Needed'  }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        2208,
+        160
+      ],
+      "id": "b0f53848-c58e-423f-b8ca-bbae7066cf41",
+      "name": "Format for Airtable"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "base": {
+          "__rl": true,
+          "value": "appTJfjGDkRN285BE",
+          "mode": "list",
+          "cachedResultName": "Book Cover Validation Tracker",
+          "cachedResultUrl": "https://airtable.com/appTJfjGDkRN285BE"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblMJCagdfLmbLP9M",
+          "mode": "list",
+          "cachedResultName": "Table 1",
+          "cachedResultUrl": "https://airtable.com/appTJfjGDkRN285BE/tblMJCagdfLmbLP9M"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "BookID (ISBN)": "={{ $('Verify Cover API').item.json.airtable_book_id }}",
+            "Status": "={{ $json.Airtable_Status }}",
+            "Confidence Score": "={{ $('Verify Cover API').item.json.confidence_score/100 }}",
+            "Visual Annotation (URL)": "={{ $('Upload file').item.json.webViewLink || $('Move file').item.json.id }}",
+            "Correction Instructions": "={{ $json.Formatted_Corrections }}",
+            "Revision Tracking": "={{ $('Verify Cover API').item.json.revision_tracking.submission_id }}",
+            "Issue Severity": "={{ $('Verify Cover API').item.json.severity }}",
+            "Verision": "={{ $('Verify Cover API').item.json.revision_tracking.version }}"
+          },
+          "matchingColumns": [
+            "BookID (ISBN)"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "BookID (ISBN)",
+              "displayName": "BookID (ISBN)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Detection TimeStamp",
+              "displayName": "Detection TimeStamp",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Issue Severity",
+              "displayName": "Issue Severity",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "info",
+                  "value": "info"
+                },
+                {
+                  "name": "warning",
+                  "value": "warning"
+                },
+                {
+                  "name": "critical",
+                  "value": "critical"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Pass",
+                  "value": "Pass"
+                },
+                {
+                  "name": "Review Needed",
+                  "value": "Review Needed"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Confidence Score",
+              "displayName": "Confidence Score",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Visual Annotation (URL)",
+              "displayName": "Visual Annotation (URL)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Correction Instructions",
+              "displayName": "Correction Instructions",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Revision Tracking",
+              "displayName": "Revision Tracking",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Verision",
+              "displayName": "Verision",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        2432,
+        160
+      ],
+      "id": "efbbb983-774f-4781-8b61-a73c4916399e",
+      "name": "Create Airtable Record",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "QfN0SKlRucjwLGut",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        416,
+        576
+      ],
+      "id": "79fae20e-ac3a-43ac-849c-7c3e57d50c31",
+      "name": "Catch Errors"
+    },
+    {
+      "parameters": {
+        "fromEmail": "gunubansal129@gmail.com",
+        "toEmail": "gunubansal12345@gmail.com",
+        "subject": "🚨 CRITICAL ERROR: Book Cover Workflow",
+        "text": "=An error occurred while processing a file. Check n8n execution logs.\n\nError Node: {{ $json.execution.error.message }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [
+        640,
+        576
+      ],
+      "id": "d0a9ad9b-2033-4e8c-a533-238a3c0839df",
+      "name": "Admin Alert Email",
+      "credentials": {
+        "smtp": {
+          "id": "2q8KSYStySD76Bbj",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "1C5y3Jw1MvbDMSJMGJSPFzVAX1U625drM",
+          "mode": "list",
+          "cachedResultName": "Book Cover Uploads",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1C5y3Jw1MvbDMSJMGJSPFzVAX1U625drM"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        416,
+        256
+      ],
+      "id": "b1ff2fd7-3e99-4369-8cfc-799e52ee38ef",
+      "name": "Google Drive Trigger1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "ljIgsP8FuKOILAEX",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('Google Drive Trigger1').item.json.id }}",
+          "mode": "id"
+        },
+        "options": {
+          "binaryPropertyName": "data"
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        864,
+        256
+      ],
+      "id": "fa2fa455-6d21-4a98-a8af-08c3402949a7",
+      "name": "Download file1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "ljIgsP8FuKOILAEX",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "={{ $('Verify Cover API').item.json.metadata.filename.replace('.png', '_processed.png') }}\n",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "175HznlQpJb4gEkmoBiyqqxO5SI6qHDlX",
+          "mode": "list",
+          "cachedResultName": "Processed",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/175HznlQpJb4gEkmoBiyqqxO5SI6qHDlX"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1760,
+        160
+      ],
+      "id": "525ffd4a-06d7-4f76-8e12-92e3aca4231d",
+      "name": "Upload file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "ljIgsP8FuKOILAEX",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fileSelector": "={{ $json.visual_annotations_url.replace('/home/pranav/Code', '/data/Code') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        1536,
+        160
+      ],
+      "id": "f6747fb1-0574-4f68-a761-99222973c39b",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6c5b1c04-948f-45d6-9fd1-5aaac0029273",
+              "leftValue": "={{ $('Verify Cover API').item.json.status }}",
+              "rightValue": "Pass",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2656,
+        256
+      ],
+      "id": "335c51c2-37ef-493d-bea4-b05d444876f0",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "fromEmail": "gunubansal129@gmail.com",
+        "toEmail": "gunubansal12345@gmail.com",
+        "subject": "=Book Cover Verified: {{ $json.fields['BookID (ISBN)'] }}",
+        "emailFormat": "text",
+        "text": "=Dear {{ $('Verify Cover API').item.json.revision_tracking.author_name }},\n\nGreat news! The automated validation system has successfully verified your book cover for\nBook : {{ $('Verify Cover API').item.json.revision_tracking.book_name }}\nISBN: {{ $json.fields['BookID (ISBN)'] }}.\n\nStatus: PASSED\nConfidence Score: {{ $json.fields['Confidence Score'] }}\n\nNo corrections are required. Your cover will proceed to the next stage of the printing process.\n\nBest regards,\nBookLeaf Publishing Team",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        2880,
+        160
+      ],
+      "id": "2fdea1f8-cd4a-46ff-acb0-486dfee12b11",
+      "name": "Send Confirmation Email",
+      "webhookId": "c6bd96a6-1ed8-4ba6-a0f3-78f1101aad6f",
+      "credentials": {
+        "smtp": {
+          "id": "2q8KSYStySD76Bbj",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "gunubansal129@gmail.com",
+        "toEmail": "gunubansal12345@gmail.com",
+        "subject": "=Action Required: Corrections for Book Cover {{ $json.fields['BookID (ISBN)'] }}",
+        "emailFormat": "text",
+        "text": "=Dear {{ $('Verify Cover API').item.json.revision_tracking.author_name }},\n\nOur automated validation system has detected layout issues with your book cover.\nBook : {{ $('Verify Cover API').item.json.revision_tracking.book_name }}\nISBN: {{ $json.fields['BookID (ISBN)'] }}.\n\nStatus: REVIEW NEEDED\nConfidence Score: {{ $json.fields['Confidence Score'] }}\n\n--- ISSUES DETECTED ---\n{{ $('Verify Cover API').item.json.correction_instructions.specific_issues.map(issue => issue.marker + ' ' + issue.details + ' (' + issue.location + ')').join('\\n') }}\n\n--- STEP-BY-STEP CORRECTIONS ---\n{{ $('Verify Cover API').item.json.correction_instructions.step_by_step.map((step, index) => (index + 1) + '. ' + step).join('\\n') }}\n\n--- RESUBMISSION TIMELINE ---\nPlease correct and resubmit the cover within a timely manner to avoid delays in the printing schedule. \n\nIf you have questions, simply reply to this email for support.\n\nBest regards,\nBookLeaf Publishing Team",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        2880,
+        352
+      ],
+      "id": "611f8e6f-a2d1-4d6d-ac7d-ad78c238c462",
+      "name": "Send Correction Email",
+      "webhookId": "c6bd96a6-1ed8-4ba6-a0f3-78f1101aad6f",
+      "credentials": {
+        "smtp": {
+          "id": "2q8KSYStySD76Bbj",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "move",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('Google Drive Trigger1').item.json.id }}",
+          "mode": "id"
+        },
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "175HznlQpJb4gEkmoBiyqqxO5SI6qHDlX",
+          "mode": "list",
+          "cachedResultName": "Processed",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/175HznlQpJb4gEkmoBiyqqxO5SI6qHDlX"
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1984,
+        160
+      ],
+      "id": "b8b33be1-7f23-4b13-80ec-c2a3f914e5ef",
+      "name": "Move file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "ljIgsP8FuKOILAEX",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a9dd7683-301d-4873-840c-2481e7261fa1",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "Pass",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1312,
+        256
+      ],
+      "id": "a5478921-248f-47bc-bd33-00877b757a6a",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "Formatted_Corrections",
+              "value": "={{ $('Verify Cover API').item.json.correction_instructions.step_by_step.join('\\n') }}"
+            },
+            {
+              "name": "Airtable_Status",
+              "value": "={{ $('Verify Cover API').item.json.status === 'Pass' ? 'Pass' : 'Review Needed'  }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        2208,
+        352
+      ],
+      "id": "665d5614-9ece-4e49-8d06-247df05e08bd",
+      "name": "Format for Airtable1"
+    },
+    {
+      "parameters": {
+        "operation": "move",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('Google Drive Trigger1').item.json.id }}",
+          "mode": "id"
+        },
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "175HznlQpJb4gEkmoBiyqqxO5SI6qHDlX",
+          "mode": "list",
+          "cachedResultName": "Processed",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/175HznlQpJb4gEkmoBiyqqxO5SI6qHDlX"
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1984,
+        352
+      ],
+      "id": "f216628e-8c11-46e1-9a2e-5b0120ae864a",
+      "name": "Move file1",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "ljIgsP8FuKOILAEX",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "base": {
+          "__rl": true,
+          "value": "appTJfjGDkRN285BE",
+          "mode": "list",
+          "cachedResultName": "Book Cover Validation Tracker",
+          "cachedResultUrl": "https://airtable.com/appTJfjGDkRN285BE"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblMJCagdfLmbLP9M",
+          "mode": "list",
+          "cachedResultName": "Table 1",
+          "cachedResultUrl": "https://airtable.com/appTJfjGDkRN285BE/tblMJCagdfLmbLP9M"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "BookID (ISBN)": "={{ $('Verify Cover API').item.json.airtable_book_id }}",
+            "Status": "={{ $json.Airtable_Status }}",
+            "Confidence Score": "={{ $('Verify Cover API').item.json.confidence_score/100 }}",
+            "Correction Instructions": "={{ $json.Formatted_Corrections }}",
+            "Revision Tracking": "={{ $('Verify Cover API').item.json.revision_tracking.submission_id }}",
+            "Issue Severity": "={{ $('Verify Cover API').item.json.severity }}",
+            "Verision": "={{ $('Verify Cover API').item.json.revision_tracking.version }}"
+          },
+          "matchingColumns": [
+            "BookID (ISBN)"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "BookID (ISBN)",
+              "displayName": "BookID (ISBN)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Detection TimeStamp",
+              "displayName": "Detection TimeStamp",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": true,
+              "removed": false
+            },
+            {
+              "id": "Issue Severity",
+              "displayName": "Issue Severity",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "info",
+                  "value": "info"
+                },
+                {
+                  "name": "warning",
+                  "value": "warning"
+                },
+                {
+                  "name": "critical",
+                  "value": "critical"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "options",
+              "options": [
+                {
+                  "name": "Pass",
+                  "value": "Pass"
+                },
+                {
+                  "name": "Review Needed",
+                  "value": "Review Needed"
+                }
+              ],
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Confidence Score",
+              "displayName": "Confidence Score",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Visual Annotation (URL)",
+              "displayName": "Visual Annotation (URL)",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": true
+            },
+            {
+              "id": "Correction Instructions",
+              "displayName": "Correction Instructions",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Revision Tracking",
+              "displayName": "Revision Tracking",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "Verision",
+              "displayName": "Verision",
+              "required": false,
+              "defaultMatch": false,
+              "canBeUsedToMatch": true,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.2,
+      "position": [
+        2432,
+        352
+      ],
+      "id": "18756578-e1ee-4a4c-a1ed-0f52ebdfa750",
+      "name": "Create Airtable Record1",
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "QfN0SKlRucjwLGut",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "File Type Filter": {
+      "main": [
+        [
+          {
+            "node": "Download file1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Cover API": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format for Airtable": {
+      "main": [
+        [
+          {
+            "node": "Create Airtable Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Catch Errors": {
+      "main": [
+        [
+          {
+            "node": "Admin Alert Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive Trigger1": {
+      "main": [
+        [
+          {
+            "node": "File Type Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file1": {
+      "main": [
+        [
+          {
+            "node": "Verify Cover API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload file": {
+      "main": [
+        [
+          {
+            "node": "Move file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Upload file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Airtable Record": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send Confirmation Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Correction Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Move file": {
+      "main": [
+        [
+          {
+            "node": "Format for Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Move file1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Move file1": {
+      "main": [
+        [
+          {
+            "node": "Format for Airtable1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Airtable Record1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format for Airtable1": {
+      "main": [
+        [
+          {
+            "node": "Create Airtable Record1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "3656d124-afe4-4f0d-b78c-392bb7c60e41",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "c5b17c4e013f335d19a8ff8b6f94ea49afde3db8b7fee636c9791b23dd20f182"
+  },
+  "nodeGroups": [],
+  "id": "E7Z9J8YTCODKmdC0",
+  "tags": []
+}
