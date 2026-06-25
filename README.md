@@ -81,7 +81,7 @@ This project was developed inside the `bookleaf` conda environment, which includ
 ### Install (with venv)
 
 ```bash
-git clone <repo-url> "Cover Validation"
+git clone https://github.com/artzuros/BookLeaf-Cover-Validation/ "Cover Validation"
 cd "Cover Validation"
 
 python -m venv .venv
