@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cover Validation Algorithm — Helper</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --dim: #8b949e;
+    --green: #3fb950;
+    --amber: #d29922;
+    --red: #f85149;
+    --cyan: #58a6ff;
+    --purple: #bc8cff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    padding: 2rem 1rem;
+  }
+  .container { max-width: 960px; margin: 0 auto; }
+
+  /* ── Header ── */
+  header {
+    text-align: center;
+    margin-bottom: 3rem;
+  }
+  header h1 {
+    font-size: 2rem;
+    background: linear-gradient(135deg, var(--amber), var(--red));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  header .badge {
+    display: inline-block;
+    font-size: .75rem;
+    font-weight: 600;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: .2rem .75rem;
+    margin-bottom: .75rem;
+    color: var(--dim);
+  }
+  header p { color: var(--dim); max-width: 640px; margin: .5rem auto 0; }
+
+  /* ── Pipeline bar ── */
+  .pipeline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    justify-content: center;
+    margin-bottom: 2.5rem;
+    padding: 1rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .pipeline .step {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    font-size: .8rem;
+    padding: .35rem .7rem;
+    border-radius: 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .pipeline .step .num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    font-size: .7rem;
+    font-weight: 700;
+    background: var(--border);
+    color: var(--text);
+  }
+  .pipeline .step.active-1 .num { background: var(--cyan); color: #000; }
+  .pipeline .step.active-2 .num { background: var(--purple); color: #000; }
+  .pipeline .step.active-3 .num { background: var(--amber); color: #000; }
+  .pipeline .step.active-4 .num { background: var(--red); color: #fff; }
+  .pipeline .arrow { color: var(--dim); font-size: 1.1rem; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .card h2 {
+    font-size: 1.15rem;
+    margin-bottom: .25rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+  .card h2 .tag {
+    font-size: .65rem;
+    font-weight: 600;
+    padding: .15rem .5rem;
+    border-radius: 6px;
+    text-transform: uppercase;
+  }
+  .tag-blue { background: #1f3a5f; color: var(--cyan); }
+  .tag-purple { background: #2a1f3f; color: var(--purple); }
+  .tag-amber { background: #3a2f1f; color: var(--amber); }
+  .tag-red { background: #3f1f1f; color: var(--red); }
+  .tag-green { background: #1f3f2f; color: var(--green); }
+  .card .subtitle { color: var(--dim); font-size: .85rem; margin-bottom: 1rem; }
+
+  /* ── Diagram boxes ── */
+  .diagram {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    align-items: center;
+    justify-content: center;
+    margin: 1rem 0;
+  }
+  .cover-svg {
+    display: block;
+    margin: 0 auto;
+  }
+
+  /* ── Code blocks ── */
+  code {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    background: #1c2128;
+    padding: .15rem .4rem;
+    border-radius: 4px;
+    font-size: .85em;
+    color: var(--amber);
+  }
+  pre {
+    background: #1c2128;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    overflow-x: auto;
+    font-size: .82rem;
+    line-height: 1.5;
+    margin: .75rem 0;
+  }
+  pre code { background: none; padding: 0; color: var(--text); }
+
+  /* ── Verdict table ── */
+  .verdict-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+  .verdict-card {
+    border-radius: 10px;
+    padding: 1.25rem;
+    border: 1px solid var(--border);
+  }
+  .verdict-card.pass { border-left: 4px solid var(--green); }
+  .verdict-card.warning { border-left: 4px solid var(--amber); }
+  .verdict-card.violation { border-left: 4px solid var(--red); }
+  .verdict-card .v-label {
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: .35rem;
+  }
+  .verdict-card.pass .v-label { color: var(--green); }
+  .verdict-card.warning .v-label { color: var(--amber); }
+  .verdict-card.violation .v-label { color: var(--red); }
+  .verdict-card p { font-size: .85rem; color: var(--dim); }
+
+  /* ── Metric boxes ── */
+  .metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin: 1rem 0;
+  }
+  .metric {
+    flex: 1;
+    min-width: 120px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: .8rem;
+    text-align: center;
+  }
+  .metric .value {
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+  .metric .label {
+    font-size: .75rem;
+    color: var(--dim);
+    margin-top: .2rem;
+  }
+  .value.green { color: var(--green); }
+  .value.amber { color: var(--amber); }
+  .value.red { color: var(--red); }
+  .value.cyan { color: var(--cyan); }
+  .value.purple { color: var(--purple); }
+
+  /* ── Decision tree ── */
+  .tree {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .25rem;
+    margin: 1.5rem 0;
+  }
+  .tree .node {
+    padding: .6rem 1.2rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    font-size: .85rem;
+    text-align: center;
+    min-width: 160px;
+  }
+  .tree .branch {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .tree .arm {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .25rem;
+  }
+  .tree .connector { color: var(--dim); font-size: .8rem; }
+
+  /* ── List styling ── */
+  ul, ol { padding-left: 1.25rem; margin: .5rem 0; }
+  li { margin-bottom: .3rem; font-size: .9rem; }
+  li strong { color: var(--cyan); }
+
+  /* ── Code highlighting ── */
+  .kw { color: var(--purple); }
+  .str { color: var(--amber); }
+  .cm { color: var(--dim); font-style: italic; }
+  .fn { color: var(--cyan); }
+  .num { color: var(--green); }
+
+  /* ── Responsive ── */
+  @media (max-width: 640px) {
+    body { padding: 1rem .5rem; }
+    .pipeline .step { font-size: .7rem; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <div class="badge">BookLeaf Technical Round 2</div>
+  <h1>Cover Validation Algorithm</h1>
+  <p>A visual walkthrough of how the system detects text overlap with the award badge zone on book covers.</p>
+</header>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- PIPELINE OVERVIEW                                      -->
+<!-- ════════════════════════════════════════════════════════ -->
+
+<div class="pipeline">
+  <span class="step active-1"><span class="num">1</span> Spread Split</span>
+  <span class="arrow">→</span>
+  <span class="step active-2"><span class="num">2</span> Zone Compute</span>
+  <span class="arrow">→</span>
+  <span class="step active-3"><span class="num">3</span> OCR Pipeline</span>
+  <span class="arrow">→</span>
+  <span class="step active-1"><span class="num">4</span> Fuzzy Match</span>
+  <span class="arrow">→</span>
+  <span class="step active-4"><span class="num">5</span> Verdict</span>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- 1. SPREAD SPLITTING                                    -->
+<!-- ════════════════════════════════════════════════════════ -->
+
+<div class="card">
+  <h2><span class="tag tag-blue">Step 1</span> Spread Splitting</h2>
+  <p class="subtitle">Covers often arrive as wraparound spreads — back cover + spine + front cover in one image. The algorithm finds where to split them.</p>
+
+  <div class="diagram">
+    <svg width="360" height="200" viewBox="0 0 360 200" class="cover-svg">
+      <!-- Back cover -->
+      <rect x="5" y="10" width="120" height="180" fill="#1c2128" stroke="#30363d" rx="3"/>
+      <text x="65" y="95" fill="#8b949e" font-size="11" text-anchor="middle" font-family="monospace">Back Cover</text>
+      <text x="65" y="110" fill="#8b949e" font-size="9" text-anchor="middle" font-family="monospace">(or back + spine)</text>
+
+      <!-- Sobel scan region -->
+      <rect x="130" y="10" width="60" height="180" fill="#1f3a5f" opacity="0.4" stroke="#58a6ff" stroke-dasharray="3,3" rx="2"/>
+      <text x="160" y="95" fill="#58a6ff" font-size="8" text-anchor="middle" font-family="monospace">Sobel</text>
+      <text x="160" y="106" fill="#58a6ff" font-size="8" text-anchor="middle" font-family="monospace">scan</text>
+
+      <!-- Gutter line -->
+      <line x1="160" y1="10" x2="160" y2="190" stroke="#f85149" stroke-width="2" stroke-dasharray="4,3"/>
+
+      <!-- Front cover -->
+      <rect x="195" y="10" width="160" height="180" fill="#161b22" stroke="#30363d" rx="3"/>
+      <!-- Award badge zone -->
+      <rect x="195" y="155" width="160" height="35" fill="#f85149" opacity="0.25" stroke="#f85149" stroke-width="1.5"/>
+      <text x="275" y="175" fill="#f85149" font-size="7" text-anchor="middle" font-family="monospace">AWARD BADGE</text>
+
+      <text x="275" y="95" fill="#8b949e" font-size="11" text-anchor="middle" font-family="monospace">Front Cover</text>
+      <text x="275" y="110" fill="#8b949e" font-size="9" text-anchor="middle" font-family="monospace">(this is what we check)</text>
+
+      <!-- Split arrow -->
+      <text x="160" y="198" fill="#d29922" font-size="9" text-anchor="middle" font-family="monospace">▲ split here</text>
+    </svg>
+  </div>
+
+  <pre><code><span class="cm"># Compute Sobel edge energy near the midpoint</span>
+mag = <span class="fn">sobel</span>(gray_image)
+
+<span class="cm"># The column with the highest edge energy = gutter fold</span>
+split_col = <span class="fn">argmax</span>(mag[:, mid - 40 : mid + 40])
+
+<span class="cm"># If no strong edge found, just split 50/50</span>
+back_cover, front_cover = image[:, :split_col], image[:, split_col:]</code></pre>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- 2. ZONE COMPUTATION                                    -->
+<!-- ════════════════════════════════════════════════════════ -->
+
+<div class="card">
+  <h2><span class="tag tag-purple">Step 2</span> Zone Computation</h2>
+  <p class="subtitle">From the front cover dimensions, we compute three critical zones in real-world millimeters, then convert to pixels.</p>
+
+  <div class="metrics">
+    <div class="metric">
+      <div class="value cyan">5" × 8"</div>
+      <div class="label">Standard trim size</div>
+    </div>
+    <div class="metric">
+      <div class="value purple">3 mm</div>
+      <div class="label">Safe margin (all edges)</div>
+    </div>
+    <div class="metric">
+      <div class="value amber">9 mm</div>
+      <div class="label">Badge zone height (bottom)</div>
+    </div>
+    <div class="metric">
+      <div class="value green">1000 px</div>
+      <div class="label">Minimum front-cover width</div>
+    </div>
+  </div>
+
+  <div class="diagram">
+    <svg width="340" height="280" viewBox="0 0 340 280" class="cover-svg">
+      <!-- Front cover outline -->
+      <rect x="20" y="10" width="300" height="260" fill="#161b22" stroke="#30363d" rx="4"/>
+
+      <!-- Safe area -->
+      <rect x="42" y="32" width="256" height="216" fill="none" stroke="#58a6ff" stroke-width="1.5" stroke-dasharray="5,3"/>
+      <text x="170" y="28" fill="#58a6ff" font-size="8" text-anchor="middle" font-family="monospace">3 mm safe margin</text>
+
+      <!-- Badge zone -->
+      <rect x="20" y="200" width="300" height="70" fill="#f85149" opacity="0.2" stroke="#f85149" stroke-width="2"/>
+      <text x="170" y="222" fill="#f85149" font-size="9" text-anchor="middle" font-family="monospace" font-weight="700">AWARD BADGE ZONE (9 mm)</text>
+      <text x="170" y="238" fill="#f85149" font-size="7" text-anchor="middle" font-family="monospace">"Winner of the 21st Century Emily Dickinson Award"</text>
+
+      <!-- Upward buffer -->
+      <rect x="20" y="175" width="300" height="25" fill="#d29922" opacity="0.15" stroke="#d29922" stroke-width="1" stroke-dasharray="3,3"/>
+      <text x="170" y="190" fill="#d29922" font-size="7" text-anchor="middle" font-family="monospace">~7.7% upward buffer (OCR extended crop)</text>
+
+      <!-- Label -->
+      <text x="10" y="270" fill="#8b949e" font-size="7" font-family="monospace">DPI = (width/5" + height/8") / 2</text>
+    </svg>
+  </div>
+
+  <pre><code><span class="cm"># Estimate DPI from pixel dimensions and physical trim size</span>
+dpi = (front_w / <span class="num">5.0</span> + front_h / <span class="num">8.0</span>) / <span class="num">2.0</span>
+px_per_mm = dpi / <span class="num">25.4</span>
+
+<span class="cm"># Badge zone = bottom 9 mm of the front cover</span>
+badge_zone = <span class="fn">Rect</span>(x=<span class="num">0</span>, y=front_h - round(<span class="num">9</span> * px_per_mm),
+                   w=front_w, h=round(<span class="num">9</span> * px_per_mm))
+
+<span class="cm"># Safe area = 3 mm inward from each edge</span>
+safe_area = <span class="fn">Rect</span>(x=side_px, y=side_px,
+                 w=front_w - <span class="num">2</span>*side_px, h=front_h - side_px - bottom_px)</code></pre>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- 3. OCR PIPELINE                                        -->
+<!-- ════════════════════════════════════════════════════════ -->
+
+<div class="card">
+  <h2><span class="tag tag-amber">Step 3</span> OCR Pipeline</h2>
+  <p class="subtitle">The badge zone (plus upward buffer) is cropped, upscaled 5×, binarized with Otsu in both polarities, and fed to Tesseract.</p>
+
+  <div class="diagram">
+    <!-- Crop -> Upscale -> Binarize -> OCR -->
+    <svg width="600" height="120" viewBox="0 0 600 120" class="cover-svg">
+      <!-- Crop -->
+      <rect x="10" y="15" width="80" height="90" fill="#1c2128" stroke="#30363d" rx="4"/>
+      <rect x="10" y="45" width="80" height="60" fill="#d29922" opacity="0.2" stroke="#d29922" rx="2"/>
+      <text x="50" y="30" fill="#8b949e" font-size="7" text-anchor="middle" font-family="monospace">Crop</text>
+      <text x="50" y="105" fill="#d29922" font-size="7" text-anchor="middle" font-family="monospace">badge + buffer</text>
+
+      <text x="100" y="65" fill="#8b949e" font-size="16">→</text>
+
+      <!-- 5x upscale -->
+      <rect x="120" y="10" width="100" height="100" fill="#1c2128" stroke="#30363d" rx="4"/>
+      <rect x="120" y="38" width="100" height="72" fill="#d29922" opacity="0.15" stroke="#d29922" rx="2"/>
+      <text x="170" y="30" fill="#58a6ff" font-size="8" text-anchor="middle" font-family="monospace" font-weight="700">5× Lanczos</text>
+      <text x="170" y="105" fill="#d29922" font-size="7" text-anchor="middle" font-family="monospace">upscale</text>
+
+      <text x="230" y="65" fill="#8b949e" font-size="16">→</text>
+
+      <!-- Binarized (normal) -->
+      <rect x="250" y="5" width="90" height="55" fill="#000" stroke="#30363d" rx="4"/>
+      <text x="295" y="30" fill="#fff" font-size="6" text-anchor="middle" font-family="monospace">BINARY (OTSU)</text>
+      <text x="295" y="40" fill="#fff" font-size="6" text-anchor="middle" font-family="monospace">Winner of the 21st</text>
+      <text x="295" y="48" fill="#fff" font-size="6" text-anchor="middle" font-family="monospace">Century Emily...</text>
+      <text x="295" y="70" fill="#8b949e" font-size="6" text-anchor="middle" font-family="monospace">normal polarity</text>
+
+      <!-- Binarized (inverted) -->
+      <rect x="250" y="65" width="90" height="55" fill="#fff" stroke="#30363d" rx="4"/>
+      <text x="295" y="86" fill="#000" font-size="6" text-anchor="middle" font-family="monospace">BINARY INV (OTSU)</text>
+      <text x="295" y="96" fill="#000" font-size="6" text-anchor="middle" font-family="monospace">Winner of the 21st</text>
+      <text x="295" y="104" fill="#000" font-size="6" text-anchor="middle" font-family="monospace">Century Emily...</text>
+      <text x="295" y="128" fill="#8b949e" font-size="6" text-anchor="middle" font-family="monospace">inverted polarity</text>
+
+      <text x="350" y="65" fill="#8b949e" font-size="16">→</text>
+
+      <!-- Tesseract -->
+      <rect x="370" y="20" width="80" height="80" fill="#1c2128" stroke="#58a6ff" rx="8"/>
+      <text x="410" y="60" fill="#58a6ff" font-size="8" text-anchor="middle" font-weight="700">Tesseract</text>
+      <text x="410" y="73" fill="#8b949e" font-size="6" text-anchor="middle" font-family="monospace">--oem 1 --psm 6</text>
+      <text x="410" y="88" fill="#8b949e" font-size="6" text-anchor="middle" font-family="monospace">pick best polarity</text>
+
+      <text x="460" y="65" fill="#8b949e" font-size="16">→</text>
+
+      <!-- Raw text -->
+      <rect x="480" y="20" width="110" height="80" fill="#1c2128" stroke="#d29922" rx="4"/>
+      <text x="535" y="40" fill="#d29922" font-size="7" text-anchor="middle" font-family="monospace" font-weight="700">Raw OCR Text</text>
+      <text x="535" y="54" fill="#e6edf3" font-size="6" text-anchor="middle" font-family="monospace">"Winner of the 21st"</text>
+      <text x="535" y="64" fill="#e6edf3" font-size="6" text-anchor="middle" font-family="monospace">"Century Emily"</text>
+      <text x="535" y="74" fill="#f85149" font-size="6" text-anchor="middle" font-family="monospace">"Author Name Here"</text>
+      <text x="535" y="84" fill="#e6edf3" font-size="6" text-anchor="middle" font-family="monospace">"Dickinson Award"</text>
+    </svg>
+  </div>
+
+  <pre><code><span class="cm"># Upcrop + 5× upscale + Otsu binarization (both polarities)</span>
+upscaled = <span class="fn">cv2.resize</span>(badge_crop, <span class="fn">None</span>, fx=<span class="num">5</span>, fy=<span class="num">5</span>,
+                     interpolation=cv2.INTER_LANCZOS4)
+_, bin_norm = <span class="fn">cv2.threshold</span>(upscaled, <span class="num">0</span>, <span class="num">255</span>, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+_, bin_inv  = <span class="fn">cv2.threshold</span>(upscaled, <span class="num">0</span>, <span class="num">255</span>, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+
+<span class="cm"># Run both and keep the one with more alphabetic content</span>
+text_norm = <span class="fn">pytesseract.image_to_string</span>(bin_norm, config=<span class="str">"--oem 1 --psm 6"</span>)
+text_inv  = <span class="fn">pytesseract.image_to_string</span>(bin_inv,  config=<span class="str">"--oem 1 --psm 6"</span>)
+result = text_inv <span class="kw">if</span> <span class="fn">alpha_count</span>(text_inv) > <span class="fn">alpha_count</span>(text_norm) <span class="kw">else</span> text_norm</code></pre>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- 4. FUZZY MATCH + LEFTOVERS                             -->
+<!-- ════════════════════════════════════════════════════════ -->
+
+<div class="card">
+  <h2><span class="tag tag-blue">Step 4</span> Fuzzy Matching &amp; Leftover Extraction</h2>
+  <p class="subtitle">The raw OCR text is fuzzy-matched against the known badge phrase. Lines that don't match become "leftovers" — candidates for text overlap.</p>
+
+  <pre><code>BADGE_PHRASE = <span class="str">"Winner of the 21st Century Emily Dickinson Award"</span>
+
+<span class="cm"># Fuzzy match the entire OCR output against the badge phrase</span>
+match_ratio = <span class="fn">SequenceMatcher</span>(<span class="fn">None</span>,
+    <span class="fn">normalize</span>(raw_text), <span class="fn">normalize</span>(BADGE_PHRASE)).<span class="fn">ratio</span>()
+
+<span class="cm"># For each line: does it look like the badge? Discard if yes.</span>
+<span class="kw">for</span> line <span class="kw">in</span> raw_text_lines:
+    <span class="kw">if</span> <span class="fn">match_against_badge</span>(line) >= <span class="num">0.85</span>:
+        <span class="kw">continue</span>        <span class="cm"># this is the badge itself</span>
+    leftovers.<span class="fn">append</span>(line)  <span class="cm"># possible intruding text!</span></code></pre>
+
+  <div class="diagram" style="gap:1rem;flex-direction:column;">
+    <svg width="560" height="100" viewBox="0 0 560 100" class="cover-svg">
+      <!-- Match bar -->
+      <rect x="10" y="10" width="540" height="35" fill="#1c2128" rx="6"/>
+      <text x="20" y="33" fill="#e6edf3" font-size="10" font-family="monospace">match_ratio = SequenceMatcher(OCR_text, badge_phrase).ratio()</text>
+
+      <!-- Threshold markers -->
+      <rect x="10" y="55" width="540" height="4" fill="#30363d" rx="2"/>
+      <circle cx="378" cy="57" r="6" fill="#3fb950"/>
+      <text x="378" y="52" fill="#3fb950" font-size="7" text-anchor="middle" font-family="monospace">0.85 PASS</text>
+      <circle cx="270" cy="57" r="6" fill="#d29922"/>
+      <text x="270" y="52" fill="#d29922" font-size="7" text-anchor="middle" font-family="monospace">0.50 FAIL</text>
+      <text x="10" y="80" fill="#8b949e" font-size="7" font-family="monospace">0.0</text>
+      <text x="540" y="80" fill="#8b949e" font-size="7" font-family="monospace" text-anchor="end">1.0</text>
+    </svg>
+  </div>
+
+  <p style="font-size:.9rem;margin-top:.5rem;"><strong style="color:var(--cyan);">Matching tiers:</strong></p>
+  <ul>
+    <li><strong style="color:var(--green);">match ≥ 0.85</strong> — Badge is fully legible. Leftovers are filtered permissively (allows near-miss badge lines).</li>
+    <li><strong style="color:var(--amber);">0.50 ≤ match &lt; 0.85</strong> — Badge partially readable. Leftovers are run through a strict "clean readability" filter (alphabetic density ≥ 70%, ≥ 2 words of length ≥ 3, avg word length &gt; 2.5).</li>
+    <li><strong style="color:var(--red);">match &lt; 0.50</strong> — Badge garbled. A relaxed check looks for any readable non-badge sentence (alphabetic density &gt; 40%, word-like chunks &gt; 6 chars).</li>
+  </ul>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- 5. VERDICT LOGIC                                       -->
+<!-- ════════════════════════════════════════════════════════ -->
+
+<div class="card">
+  <h2><span class="tag tag-red">Step 5</span> Three-Tier Verdict</h2>
+  <p class="subtitle">The final decision combines OCR leftovers, match ratio, MSER geometric overlap count, and a resolution guard.</p>
+
+  <div class="verdict-grid">
+    <div class="verdict-card pass">
+      <div class="v-label">✓ PASS</div>
+      <p>Badge is fully legible (match ≥ 0.85) with no intruding text. Or mid-range match with only OCR noise — no overlap concerns.</p>
+    </div>
+    <div class="verdict-card warning">
+      <div class="v-label">! WARNING</div>
+      <p>Leftover OCR lines exist but none pass the clean-readability filter. Match ratio &lt; 0.50 suggests edge proximity or layout congestion, not confirmed overlap.</p>
+    </div>
+    <div class="verdict-card violation">
+      <div class="v-label">✗ VIOLATION</div>
+      <p>Clean, readable non-badge text lines are confirmed in the badge zone. The cover must be redesigned with adequate clearance.</p>
+    </div>
+  </div>
+
+  <!-- Decision tree -->
+  <div class="tree">
+    <div class="node" style="border-color:#58a6ff;">OCR leftover lines found?</div>
+    <div class="branch">
+      <div class="arm">
+        <span class="connector">∣  No</span>
+        <div class="node" style="border-color:#3fb950;">PASS ✓<br><span style="font-size:.7rem;color:var(--dim)">Badge clean</span></div>
+      </div>
+      <div class="arm">
+        <span class="connector">∣  Yes</span>
+        <div class="node" style="border-color:#58a6ff;">Clean readable text in leftovers?</div>
+        <div class="branch">
+          <div class="arm">
+            <span class="connector">∣  Yes</span>
+            <div class="node" style="border-color:#f85149;">VIOLATION ✗</div>
+          </div>
+          <div class="arm">
+            <span class="connector">∣  No</span>
+            <div class="node" style="border-color:#58a6ff;">match_ratio &lt; 0.50?</div>
+            <div class="branch">
+              <div class="arm">
+                <span class="connector">∣  Yes</span>
+                <div class="node" style="border-color:#d29922;">WARNING !</div>
+              </div>
+              <div class="arm">
+                <span class="connector">∣  No</span>
+                <div class="node" style="border-color:#3fb950;">PASS ✓<br><span style="font-size:.7rem;color:var(--dim)">Noise only</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <pre><code><span class="kw">if</span> clean_leftovers:
+    <span class="kw">return</span> <span class="str">"VIOLATION"</span>    <span class="cm"># readable non-badge text in badge zone</span>
+
+<span class="kw">if</span> <span class="kw">not</span> leftovers:
+    <span class="kw">return</span> <span class="str">"PASS"</span>          <span class="cm"># badge zone clean</span>
+
+<span class="kw">if</span> match_ratio &lt; <span class="num">0.50</span>:
+    <span class="kw">return</span> <span class="str">"WARNING"</span>      <span class="cm"># edge proximity, no confirmed overlap</span>
+
+<span class="kw">return</span> <span class="str">"PASS"</span>              <span class="cm"># mid-range match, OCR noise only</span></code></pre>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- 6. MSER GEOMETRIC DETECTION (SECONDARY)                -->
+<!-- ════════════════════════════════════════════════════════ -->
+
+<div class="card">
+  <h2><span class="tag tag-purple">+ MSER</span> Geometric Text Detection (Secondary)</h2>
+  <p class="subtitle">A corroborating signal using Maximally Stable Extremal Regions to detect text-like blobs in the badge zone. Never the sole basis for a VIOLATION.</p>
+
+  <div class="diagram">
+    <svg width="500" height="100" viewBox="0 0 500 100" class="cover-svg">
+      <!-- MSER flow -->
+      <rect x="10" y="20" width="100" height="60" fill="#1c2128" stroke="#30363d" rx="4"/>
+      <text x="60" y="55" fill="#e6edf3" font-size="8" text-anchor="middle" font-family="monospace">MSER detectRegions</text>
+
+      <text x="120" y="55" fill="#8b949e" font-size="14">→</text>
+
+      <rect x="140" y="20" width="80" height="60" fill="#1c2128" stroke="#30363d" rx="4"/>
+      <text x="180" y="48" fill="#e6edf3" font-size="7" text-anchor="middle" font-family="monospace">Filter by</text>
+      <text x="180" y="60" fill="#e6edf3" font-size="7" text-anchor="middle" font-family="monospace">aspect ratio</text>
+
+      <text x="230" y="55" fill="#8b949e" font-size="14">→</text>
+
+      <rect x="250" y="20" width="80" height="60" fill="#1c2128" stroke="#30363d" rx="4"/>
+      <text x="290" y="48" fill="#e6edf3" font-size="7" text-anchor="middle" font-family="monospace">Merge into</text>
+      <text x="290" y="60" fill="#e6edf3" font-size="7" text-anchor="middle" font-family="monospace">lines</text>
+
+      <text x="340" y="55" fill="#8b949e" font-size="14">→</text>
+
+      <rect x="360" y="20" width="120" height="60" fill="#1c2128" stroke="#d29922" rx="4"/>
+      <text x="420" y="48" fill="#d29922" font-size="7" text-anchor="middle" font-family="monospace">Report line count</text>
+      <text x="420" y="60" fill="#8b949e" font-size="7" text-anchor="middle" font-family="monospace">(corroboration only)</text>
+    </svg>
+  </div>
+
+  <ul>
+    <li>Uses <strong>MSER</strong> (OpenCV) to detect extremal regions — blobs that are either consistently darker or lighter than their surroundings.</li>
+    <li>Glyphs filtered by aspect ratio: &gt; 0.15 and &lt; 4.0 (discards lines and blobs that are too tall or wide to be text).</li>
+    <li>Merges nearby glyphs into lines using y-overlap and x-distance thresholds.</li>
+    <li>Filters out merged lines smaller than 40 px wide or 8 px tall.</li>
+    <li>The <strong>count</strong> of geometric lines in the badge zone is reported alongside the OCR verdict for informational purposes only.</li>
+  </ul>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- 7. RESOLUTION GUARD                                    -->
+<!-- ════════════════════════════════════════════════════════ -->
+
+<div class="card">
+  <h2><span class="tag tag-amber">⚡</span> Resolution Guard</h2>
+  <p class="subtitle">Covers narrower than 1000 px on the front face get flagged. The detection still runs but results are less reliable.</p>
+
+  <div class="metrics">
+    <div class="metric">
+      <div class="value cyan">1000 px</div>
+      <div class="label">Minimum width</div>
+    </div>
+    <div class="metric">
+      <div class="value amber">~12 px</div>
+      <div class="label">Badge zone at 1000 px width</div>
+    </div>
+    <div class="metric">
+      <div class="value red">&lt; 12 px</div>
+      <div class="label">Too few pixels for reliable OCR</div>
+    </div>
+  </div>
+
+  <pre><code><span class="kw">if</span> front_w &lt; <span class="num">1000</span>:
+    resolution_warning = (
+        <span class="str">"Front cover is only {front_w}px wide "</span>
+        <span class="str">"(min 1000 px recommended). "</span>
+        <span class="str">"Too small for precise measurement."</span>
+    )
+    confidence_score -= <span class="num">10</span>  <span class="cm"># penalize confidence</span></code></pre>
+
+  <p style="font-size:.85rem;color:var(--dim);">The <strong>combined confidence score</strong> starts at 90 (high), 70 (medium), or 50 (low) and is further adjusted by the match ratio and resolution penalty — clamped to [10, 99].</p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- 8. VISUAL OUTPUT                                       -->
+<!-- ════════════════════════════════════════════════════════ -->
+
+<div class="card">
+  <h2><span class="tag tag-green">🎨</span> Visual Output Legend</h2>
+  <p class="subtitle">For WARNING and VIOLATION cases, the system generates an annotated PNG that makes the problem immediately obvious.</p>
+
+  <div class="diagram" style="flex-direction:column;align-items:stretch;gap:.5rem;">
+    <svg width="560" height="36" viewBox="0 0 560 36" class="cover-svg">
+      <rect x="0" y="0" width="560" height="30" fill="#1e1e1e" rx="4"/>
+      <rect x="0" y="0" width="6" height="30" fill="#f85149" rx="2"/>
+      <text x="14" y="20" fill="#f85149" font-size="11" font-weight="700" font-family="monospace">✗ VIOLATION  [high]  match=0.62</text>
+      <text x="280" y="20" fill="#d29922" font-size="8" font-family="monospace">Front cover is only 750px wide (min 1000 px recommended).</text>
+    </svg>
+
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+      <div style="display:flex;align-items:center;gap:.4rem;font-size:.8rem;">
+        <span style="display:inline-block;width:16px;height:16px;border-radius:3px;background:rgba(248,81,73,0.3);border:2px solid #f85149;"></span>
+        <span>Badge zone (red = VIOLATION)</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:.4rem;font-size:.8rem;">
+        <span style="display:inline-block;width:16px;height:16px;border-radius:3px;border:1.5px dashed #58a6ff;"></span>
+        <span style="color:var(--cyan);">Safe margin (cyan)</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:.4rem;font-size:.8rem;">
+        <span style="display:inline-block;width:16px;height:16px;border-radius:3px;border:1px dashed #d29922;"></span>
+        <span style="color:var(--amber);">Upward buffer (amber)</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:.4rem;font-size:.8rem;">
+        <span style="display:inline-block;width:16px;height:16px;border-radius:3px;background:#000;"></span>
+        <span style="color:var(--dim);">OCR sidebar + intrusion list</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- GROUND TRUTH                                           -->
+<!-- ════════════════════════════════════════════════════════ -->
+
+<div class="card">
+  <h2><span class="tag tag-green">📊</span> Ground Truth Results</h2>
+  <p class="subtitle">The test set has 8 labelled covers. Run <code>python cover_verify.py</code> to check all against expected verdicts.</p>
+
+  <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:.85rem;">
+      <thead>
+        <tr style="border-bottom:1px solid var(--border);">
+          <th style="text-align:left;padding:.5rem .75rem;">#</th>
+          <th style="text-align:left;padding:.5rem .75rem;">Title</th>
+          <th style="text-align:center;padding:.5rem .75rem;">Expected</th>
+          <th style="text-align:left;padding:.5rem .75rem;">Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:1px solid #1c2128;">
+          <td style="padding:.5rem .75rem;color:var(--dim);">28</td>
+          <td style="padding:.5rem .75rem;">Shabd (uncorrected)</td>
+          <td style="text-align:center;padding:.5rem .75rem;"><span style="color:var(--red);font-weight:700;">VIOLATION</span></td>
+          <td style="padding:.5rem .75rem;color:var(--dim);">Author name overlaps badge text</td>
+        </tr>
+        <tr style="border-bottom:1px solid #1c2128;">
+          <td style="padding:.5rem .75rem;color:var(--dim);">29</td>
+          <td style="padding:.5rem .75rem;">Shabd (corrected)</td>
+          <td style="text-align:center;padding:.5rem .75rem;"><span style="color:var(--green);font-weight:700;">PASS</span></td>
+          <td style="padding:.5rem .75rem;color:var(--dim);">Clean separation after fix</td>
+        </tr>
+        <tr style="border-bottom:1px solid #1c2128;">
+          <td style="padding:.5rem .75rem;color:var(--dim);">31</td>
+          <td style="padding:.5rem .75rem;">Offline Sorrows / Online Ghosts</td>
+          <td style="text-align:center;padding:.5rem .75rem;"><span style="color:var(--green);font-weight:700;">PASS</span></td>
+          <td style="padding:.5rem .75rem;color:var(--dim);">Human review cleared</td>
+        </tr>
+        <tr style="border-bottom:1px solid #1c2128;">
+          <td style="padding:.5rem .75rem;color:var(--dim);">32</td>
+          <td style="padding:.5rem .75rem;">Echoes Along the Way (uncorrected)</td>
+          <td style="text-align:center;padding:.5rem .75rem;"><span style="color:var(--red);font-weight:700;">VIOLATION</span></td>
+          <td style="padding:.5rem .75rem;color:var(--dim);">Tagline overlaps badge</td>
+        </tr>
+        <tr style="border-bottom:1px solid #1c2128;">
+          <td style="padding:.5rem .75rem;color:var(--dim);">33</td>
+          <td style="padding:.5rem .75rem;">Echoes Along the Way (corrected)</td>
+          <td style="text-align:center;padding:.5rem .75rem;"><span style="color:var(--green);font-weight:700;">PASS</span></td>
+          <td style="padding:.5rem .75rem;color:var(--dim);">Clean separation after fix</td>
+        </tr>
+        <tr style="border-bottom:1px solid #1c2128;">
+          <td style="padding:.5rem .75rem;color:var(--dim);">34</td>
+          <td style="padding:.5rem .75rem;">Inner Mirror (uncorrected)</td>
+          <td style="text-align:center;padding:.5rem .75rem;"><span style="color:var(--amber);font-weight:700;">WARNING</span></td>
+          <td style="padding:.5rem .75rem;color:var(--dim);">Content near badge; technically allowed but tight</td>
+        </tr>
+        <tr style="border-bottom:1px solid #1c2128;">
+          <td style="padding:.5rem .75rem;color:var(--dim);">35</td>
+          <td style="padding:.5rem .75rem;">Inner Mirror (corrected)</td>
+          <td style="text-align:center;padding:.5rem .75rem;"><span style="color:var(--green);font-weight:700;">PASS</span></td>
+          <td style="padding:.5rem .75rem;color:var(--dim);">Breathing room added</td>
+        </tr>
+        <tr>
+          <td style="padding:.5rem .75rem;color:var(--dim);">36</td>
+          <td style="padding:.5rem .75rem;">Tainted By Emotion</td>
+          <td style="text-align:center;padding:.5rem .75rem;"><span style="color:var(--red);font-weight:700;">VIOLATION</span></td>
+          <td style="padding:.5rem .75rem;color:var(--dim);">Tagline overlaps; floral border crowds margins</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<!-- KEY FILES                                              -->
+<!-- ════════════════════════════════════════════════════════ -->
+
+<div class="card">
+  <h2><span class="tag tag-blue">📁</span> Key Source Files</h2>
+  <table style="width:100%;border-collapse:collapse;font-size:.85rem;">
+    <thead>
+      <tr style="border-bottom:1px solid var(--border);">
+        <th style="text-align:left;padding:.5rem .75rem;">File</th>
+        <th style="text-align:left;padding:.5rem .75rem;">What it does</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td style="padding:.25rem .75rem;color:var(--cyan);font-family:monospace;">src/detector.py</td><td style="padding:.25rem .75rem;color:var(--dim);">Core algorithm: <code>check_badge_overlap()</code>, OCR, MSER, zones, verdict</td></tr>
+      <tr><td style="padding:.25rem .75rem;color:var(--cyan);font-family:monospace;">src/visualizer.py</td><td style="padding:.25rem .75rem;color:var(--dim);">Annotated PNG generation with all overlay elements</td></tr>
+      <tr><td style="padding:.25rem .75rem;color:var(--cyan);font-family:monospace;">src/models.py</td><td style="padding:.25rem .75rem;color:var(--dim);">Pydantic response model + <code>build_response()</code> factory</td></tr>
+      <tr><td style="padding:.25rem .75rem;color:var(--cyan);font-family:monospace;">src/main.py</td><td style="padding:.25rem .75rem;color:var(--dim);">FastAPI server, CORS, static mounts, startup</td></tr>
+      <tr><td style="padding:.25rem .75rem;color:var(--cyan);font-family:monospace;">src/routers/verify.py</td><td style="padding:.25rem .75rem;color:var(--dim);">POST /verify endpoint — upload, process, respond</td></tr>
+      <tr><td style="padding:.25rem .75rem;color:var(--cyan);font-family:monospace;">src/database.py</td><td style="padding:.25rem .75rem;color:var(--dim);">SQLite revision tracking (books + revisions tables)</td></tr>
+      <tr><td style="padding:.25rem .75rem;color:var(--cyan);font-family:monospace;">src/pdf_converter.py</td><td style="padding:.25rem .75rem;color:var(--dim);">PDF → numpy array via PyMuPDF</td></tr>
+      <tr><td style="padding:.25rem .75rem;color:var(--cyan);font-family:monospace;">src/filename_parser.py</td><td style="padding:.25rem .75rem;color:var(--dim);">ISBN extraction from <code>ISBN_text.ext</code> file names</td></tr>
+      <tr><td style="padding:.25rem .75rem;color:var(--cyan);font-family:monospace;">cover_verify.py</td><td style="padding:.25rem .75rem;color:var(--dim);">Standalone batch script with ground-truth comparison</td></tr>
+      <tr><td style="padding:.25rem .75rem;color:var(--cyan);font-family:monospace;">cover_visualize.py</td><td style="padding:.25rem .75rem;color:var(--dim);">Standalone batch script + annotated visual output</td></tr>
+    </tbody>
+  </table>
+</div>
+
+</div>
+</body>
+</html>
